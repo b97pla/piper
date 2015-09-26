@@ -13,17 +13,19 @@ class VariantCallingTarget(outputDir: File,
                            val isLowpass: Boolean,
                            val isExome: Boolean,
                            val nSamples: Int,
-                           val snpGenotypingVcf: Option[File] = None) {
+                           val snpGenotypingVcf: Option[File] = None,
+                           val vcfExtension: String = "vcf") {
 
+  val vcfExt = if (vcfExtension.startsWith(".")) vcfExtension.tail else vcfExtension
   val name = outputDir + "/" + baseName
   val clusterFile = new File(name + ".clusters")
-  val gVCFFile = new File(name + ".genomic.vcf")
-  val rawSnpVCF = new File(name + ".raw.snp.vcf")
-  val rawIndelVCF = new File(name + ".raw.indel.vcf")
-  val rawCombinedVariants = new File(name + ".raw.vcf")
-  val filteredIndelVCF = new File(name + ".filtered.indel.vcf")
-  val recalibratedSnpVCF = new File(name + ".recalibrated.snp.vcf")
-  val recalibratedIndelVCF = new File(name + ".recalibrated.indel.vcf")
+  val gVCFFile = new File(name + ".genomic." + vcfExt)
+  val rawSnpVCF = new File(name + ".raw.snp." + vcfExt)
+  val rawIndelVCF = new File(name + ".raw.indel." + vcfExt)
+  val rawCombinedVariants = new File(name + ".raw." + vcfExt)
+  val filteredIndelVCF = new File(name + ".filtered.indel." + vcfExt)
+  val recalibratedSnpVCF = new File(name + ".recalibrated.snp." + vcfExt)
+  val recalibratedIndelVCF = new File(name + ".recalibrated.indel." + vcfExt)
   val tranchesSnpFile = new File(name + ".snp.tranches")
   val tranchesIndelFile = new File(name + ".indel.tranches")
   val vqsrSnpRscript: File = new File(name + ".snp.vqsr.r")
@@ -32,6 +34,5 @@ class VariantCallingTarget(outputDir: File,
   val recalIndelFile = new File(name + ".indel.tranches.recal")
   val evalFile = new File(name + ".snp.eval")
   val evalIndelFile = new File(name + ".indel.eval")
-  val genotypeConcordance = new File(name + ".genotypeconcordance.txt")  
-  
+  val genotypeConcordance = new File(name + ".genotypeconcordance.txt")
 }

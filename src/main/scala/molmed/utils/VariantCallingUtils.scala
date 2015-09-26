@@ -30,7 +30,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         Seq(bam),
         gatkOptions.intervalFile,
         config.isLowPass, config.isExome, 1,
-        snpGenotypingVcf = gatkOptions.snpGenotypingVcf))
+        snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+        vcfExtension = config.vcfExtension))
 
     for (target <- targets) yield {
 
@@ -71,7 +72,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
               gatkOptions.reference,
               Seq(bam),
               gatkOptions.intervalFile,
-              config.isLowPass, config.isExome, 1)
+              config.isLowPass, config.isExome, 1,
+              vcfExtension = target.vcfExtension)
 
           config.qscript.add(new HaplotypeCallerBase(modifiedTarget, config.testMode, config.downsampleFraction, config.pcrFree, config.minimumBaseQuality))
           modifiedTarget.gVCFFile
@@ -142,13 +144,14 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
 
   /**
    * Annotated a bunch of vcf files using SnpEff - assumes all input files have
-   * a vcf file ending.
+   * a .vcf or .vcf.gz file ending.
    * @param variantFiles The variant files to annotate
    * @return The annotated versions of the files.
    */
   def annotateUsingSnpEff(config: VariantCallingConfig, variantFiles: Seq[File]): Seq[File] = {
+    val vcfExt = if (config.vcfExtension.startsWith(".")) config.vcfExtension.tail else config.vcfExtension
     for (file <- variantFiles) yield {
-      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, ".vcf", ".annotated.vcf")
+      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, vcfExt, ".annotated." + vcfExt)
       config.qscript.add(
         new SnpEff(file, annotatedFile, config))
       annotatedFile
@@ -172,7 +175,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           Seq(bam),
           gatkOptions.intervalFile,
           config.isLowPass, config.isExome, 1,
-          snpGenotypingVcf = gatkOptions.snpGenotypingVcf))
+          snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          vcfExtension = config.vcfExtension))
 
       case (true, true) =>
         config.bams.map(bam => new VariantCallingTarget(config.outputDir,
@@ -181,7 +185,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           Seq(bam),
           gatkOptions.intervalFile,
           config.isLowPass, false, 1,
-          snpGenotypingVcf = gatkOptions.snpGenotypingVcf))
+          snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          vcfExtension = config.vcfExtension))
 
       case (false, true) =>
         Seq(new VariantCallingTarget(config.outputDir,
@@ -190,7 +195,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.bams,
           gatkOptions.intervalFile,
           config.isLowPass, false, config.bams.size,
-          snpGenotypingVcf = gatkOptions.snpGenotypingVcf))
+          snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          vcfExtension = config.vcfExtension))
 
       case (false, false) =>
         Seq(new VariantCallingTarget(config.outputDir,
@@ -199,7 +205,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.bams,
           gatkOptions.intervalFile,
           config.isLowPass, config.isExome, config.bams.size,
-          snpGenotypingVcf = gatkOptions.snpGenotypingVcf))
+          snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          vcfExtension = config.vcfExtension))
     }
 
     // Make sure resource files are available if recalibration is to be performed
@@ -226,7 +233,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         }
       })
 
-    val unannotatedVariantFiles = variantAndEvalFiles.filter(_.getName().endsWith(".vcf"))
+    val unannotatedVariantFiles =
+      variantAndEvalFiles.filter(_.getName().endsWith(config.vcfExtension))
 
     if (config.skipAnnotation)
       variantAndEvalFiles
