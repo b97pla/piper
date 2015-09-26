@@ -102,7 +102,7 @@ class DNABestPracticeVariantCalling extends QScript
   var skipAnnotation: Boolean = false
 
   @Argument(fullName = "vcf_extension", shortName = "vcfExtension", doc = "VCF extension: 'vcf' (default) or 'vcf.gz'", required = false)
-  var vcfExtension: String = "vcf"
+  var vcfExtension: String = "vcf.gz"
 
   @Argument(shortName = "mbq", doc = "The minimum Phred-Scaled quality score threshold to be considered a good base in variant calling", required = false)
   var minimumBaseQuality: Int = -1
