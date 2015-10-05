@@ -151,7 +151,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
   def annotateUsingSnpEff(config: VariantCallingConfig, variantFiles: Seq[File]): Seq[File] = {
     val vcfExt = if (config.vcfExtension.startsWith(".")) config.vcfExtension.tail else config.vcfExtension
     for (file <- variantFiles) yield {
-      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, vcfExt, ".annotated." + vcfExt)
+      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, vcfExt, "annotated." + vcfExt)
       config.qscript.add(
         new SnpEff(file, annotatedFile, config))
       annotatedFile
