@@ -14,18 +14,18 @@ class VariantCallingTarget(outputDir: File,
                            val isExome: Boolean,
                            val nSamples: Int,
                            val snpGenotypingVcf: Option[File] = None,
-                           val vcfExtension: String = "vcf") {
+                           val skipVcfCompression: Boolean = true) {
 
-  val vcfExt = if (vcfExtension.startsWith(".")) vcfExtension.tail else vcfExtension
+  val vcfExtension = if (skipVcfCompression) "vcf" else "vcf.gz"
   val name = outputDir + "/" + baseName
   val clusterFile = new File(name + ".clusters")
-  val gVCFFile = new File(name + ".genomic." + vcfExt)
-  val rawSnpVCF = new File(name + ".raw.snp." + vcfExt)
-  val rawIndelVCF = new File(name + ".raw.indel." + vcfExt)
-  val rawCombinedVariants = new File(name + ".raw." + vcfExt)
-  val filteredIndelVCF = new File(name + ".filtered.indel." + vcfExt)
-  val recalibratedSnpVCF = new File(name + ".recalibrated.snp." + vcfExt)
-  val recalibratedIndelVCF = new File(name + ".recalibrated.indel." + vcfExt)
+  val gVCFFile = new File(name + ".genomic." + vcfExtension)
+  val rawSnpVCF = new File(name + ".raw.snp." + vcfExtension)
+  val rawIndelVCF = new File(name + ".raw.indel." + vcfExtension)
+  val rawCombinedVariants = new File(name + ".raw." + vcfExtension)
+  val filteredIndelVCF = new File(name + ".filtered.indel." + vcfExtension)
+  val recalibratedSnpVCF = new File(name + ".recalibrated.snp." + vcfExtension)
+  val recalibratedIndelVCF = new File(name + ".recalibrated.indel." + vcfExtension)
   val tranchesSnpFile = new File(name + ".snp.tranches")
   val tranchesIndelFile = new File(name + ".indel.tranches")
   val vqsrSnpRscript: File = new File(name + ".snp.vqsr.r")

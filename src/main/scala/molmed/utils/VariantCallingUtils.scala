@@ -31,7 +31,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         gatkOptions.intervalFile,
         config.isLowPass, config.isExome, 1,
         snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
-        vcfExtension = config.vcfExtension))
+        skipVcfCompression = config.skipVcfCompression))
 
     for (target <- targets) yield {
 
@@ -73,7 +73,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
               Seq(bam),
               gatkOptions.intervalFile,
               config.isLowPass, config.isExome, 1,
-              vcfExtension = target.vcfExtension)
+              skipVcfCompression = target.skipVcfCompression)
 
           config.qscript.add(new HaplotypeCallerBase(modifiedTarget, config.testMode, config.downsampleFraction, config.pcrFree, config.minimumBaseQuality))
           modifiedTarget.gVCFFile
@@ -148,10 +148,9 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
    * @param variantFiles The variant files to annotate
    * @return The annotated versions of the files.
    */
-  def annotateUsingSnpEff(config: VariantCallingConfig, variantFiles: Seq[File]): Seq[File] = {
-    val vcfExt = if (config.vcfExtension.startsWith(".")) config.vcfExtension.tail else config.vcfExtension
+  def annotateUsingSnpEff(config: VariantCallingConfig, variantFiles: Seq[File], vcfExtension: String): Seq[File] = {
     for (file <- variantFiles) yield {
-      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, vcfExt, "annotated." + vcfExt)
+      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, vcfExtension, "annotated." + vcfExtension)
       config.qscript.add(
         new SnpEff(file, annotatedFile, config))
       annotatedFile
@@ -176,7 +175,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           gatkOptions.intervalFile,
           config.isLowPass, config.isExome, 1,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
-          vcfExtension = config.vcfExtension))
+          skipVcfCompression = config.skipVcfCompression))
 
       case (true, true) =>
         config.bams.map(bam => new VariantCallingTarget(config.outputDir,
@@ -186,7 +185,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           gatkOptions.intervalFile,
           config.isLowPass, false, 1,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
-          vcfExtension = config.vcfExtension))
+          skipVcfCompression = config.skipVcfCompression))
 
       case (false, true) =>
         Seq(new VariantCallingTarget(config.outputDir,
@@ -196,7 +195,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           gatkOptions.intervalFile,
           config.isLowPass, false, config.bams.size,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
-          vcfExtension = config.vcfExtension))
+          skipVcfCompression = config.skipVcfCompression))
 
       case (false, false) =>
         Seq(new VariantCallingTarget(config.outputDir,
@@ -206,7 +205,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           gatkOptions.intervalFile,
           config.isLowPass, config.isExome, config.bams.size,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
-          vcfExtension = config.vcfExtension))
+          skipVcfCompression = config.skipVcfCompression))
     }
 
     // Make sure resource files are available if recalibration is to be performed
@@ -233,13 +232,14 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         }
       })
 
+    val vcfExtension = targets(0).vcfExtension
     val unannotatedVariantFiles =
-      variantAndEvalFiles.filter(_.getName().endsWith(config.vcfExtension))
+      variantAndEvalFiles.filter(_.getName().endsWith(vcfExtension))
 
     if (config.skipAnnotation)
       variantAndEvalFiles
     else
-      annotateUsingSnpEff(config, unannotatedVariantFiles) ++ variantAndEvalFiles
+      annotateUsingSnpEff(config, unannotatedVariantFiles, vcfExtension) ++ variantAndEvalFiles
   }
 
   def bai(bam: File): File = new File(bam + ".bai")

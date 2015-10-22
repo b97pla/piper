@@ -33,7 +33,7 @@ case object GATKHaplotypeCaller extends VariantCallerOption
  * @param snpEffConfigPath  Path to snpEff config file
  * @param snpEffReference   The snpEff reference to use. E.g. "GRCh37.75"
  * @param skipAnnotation   Skip the annotation process
- * @param vcfExtension     Extension of generated vcf files
+ * @param skipVcfCompression    Skip compression of generated vcf files
  */
 case class VariantCallingConfig(qscript: QScript,
 								variantCaller: Option[VariantCallerOption] = Some(GATKHaplotypeCaller),
@@ -54,4 +54,4 @@ case class VariantCallingConfig(qscript: QScript,
                                 snpEffConfigPath: Option[File] = None,
                                 snpEffReference: Option[String] = None,
                                 skipAnnotation: Boolean,
-                                vcfExtension: String = "vcf")
+                                skipVcfCompression: Boolean)

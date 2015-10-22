@@ -101,8 +101,8 @@ class DNABestPracticeVariantCalling extends QScript
   @Argument(fullName = "skip_annotation", shortName = "noAnnotation", doc = "Skip the snpEff annotation step", required = false)
   var skipAnnotation: Boolean = false
 
-  @Argument(fullName = "vcf_extension", shortName = "vcfExtension", doc = "VCF extension: 'vcf' (default) or 'vcf.gz'", required = false)
-  var vcfExtension: String = "vcf.gz"
+  @Argument(fullName = "skip_vcf_compression", shortName = "noCompress", doc = "Skip gz compression of vcf files", required = false)
+  var skipVcfCompression: Boolean = false
 
   @Argument(shortName = "mbq", doc = "The minimum Phred-Scaled quality score threshold to be considered a good base in variant calling", required = false)
   var minimumBaseQuality: Int = -1
@@ -247,7 +247,7 @@ class DNABestPracticeVariantCalling extends QScript
         isExome = this.isExome,
         testMode = this.testMode,
         minimumBaseQuality = this.minimumBaseQuality,
-        vcfExtension = this.vcfExtension)
+        skipVcfCompression = this.skipVcfCompression)
     }
 
     /**
@@ -399,7 +399,7 @@ class DNABestPracticeVariantCalling extends QScript
       snpEffConfigPath,
       Some(snpEffReference),
       skipAnnotation,
-      vcfExtension)
+      skipVcfCompression)
 
     variantCallingUtils.performVariantCalling(variantCallingConfig)
   }

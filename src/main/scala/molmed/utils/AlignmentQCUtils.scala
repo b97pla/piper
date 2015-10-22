@@ -68,7 +68,7 @@ class AlignmentQCUtils(
     isExome: Boolean,
     testMode: Boolean,
     minimumBaseQuality: Option[Int],
-    vcfExtension: String): Seq[File] = {
+    skipVcfCompression: Boolean): Seq[File] = {
 
     val gatkOptionsWithGenotypingSnp = gatkOptions.copy(snpGenotypingVcf = Some(comparisonVcf))
     
@@ -87,7 +87,7 @@ class AlignmentQCUtils(
       minimumBaseQuality = minimumBaseQuality,
       noBAQ = true,
       skipAnnotation = true,
-      vcfExtension = vcfExtension)
+      skipVcfCompression = skipVcfCompression)
 
     val concordanceFiles = variantCallingUtils.checkGenotypeConcordance(variantCallingConfig)
     concordanceFiles
