@@ -137,6 +137,9 @@ class DNABestPracticeVariantCalling extends QScript
   @Argument(doc = "When using the --super_charge option, use this to specify number of groups (default: 3)", fullName = "ways_to_split", shortName = "wts", required = false)
   var groupsToSplitTo: Int = 3
 
+  @Argument(doc = "Skip including the read barcode as a tag in the mappped BAM files when mapping with bwa mem", fullName = "no_barcode_tag", shortName = "nobc", required = false)
+  var noBarcodeTag: Boolean = false
+
   /**
    * **************************************************************************
    * Hidden Parameters - for dev.
@@ -187,7 +190,7 @@ class DNABestPracticeVariantCalling extends QScript
                     alignmentOutputDir: File): Map[String, Seq[File]] = {
 
     val aligner: Option[AlignerOption] = decideAlignerType(bwaAlignerType)
-    val alignmentUtils = new BwaAlignmentUtils(this, bwaPath, nbrOfThreads, samtoolsPath, projectName, uppmaxConfig)
+    val alignmentUtils = new BwaAlignmentUtils(this, bwaPath, nbrOfThreads, samtoolsPath, projectName, uppmaxConfig, noBarcodeTag = noBarcodeTag)
     val sampleNamesAndalignedBamFiles = samples.values.flatten.map(sample =>
       (sample.getSampleName,
         alignmentUtils.align(
