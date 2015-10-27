@@ -273,16 +273,20 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
       samtoolsPath + " index " + alignedBam.getAbsoluteFile()
 
     // reformat the fastq header so that bwa can add the comment as a tag in the bam file (-C option)
-    def reformatHeader(fastqFile: File): String =
-      if (noBarcodeTag)
-        fastqFile.getPath
-      else {
-        val catter = if (fastqFile.getName.endsWith(".gz")) "zcat" else "cat"
-        "<(" + catter + " " + fastqFile.getPath + "| sed -re 's/^(@\\S+)\\s+.*:([ACGTN]+)$/\\1 BC:Z:\\2/')"
+    def reformatHeader(fastqFile: Option[File]): String =
+      if (fastqFile.isDefined) {
+          if (noBarcodeTag)
+              fastqFile.get.getPath + " "
+          else {
+              val catter = if (fastqFile.get.getName.endsWith(".gz")) "zcat" else "cat"
+              "<(" + catter + " " + fastqFile.get.getPath + "| sed -re 's/^(@\\S+)\\s+.*:([ACGTN]+)$/\\1 BC:Z:\\2/') "
+          }
       }
+      else
+          ""
 
-    @Input(doc = "fastq file with mate 1 to be aligned") var mate1 = reformatHeader(fastq1)
-    @Input(doc = "fastq file with mate 2 file to be aligned") var mate2 = if (fastq2.isDefined) reformatHeader(fastq2.get) else ""
+    @Input(doc = "fastq file with mate 1 to be aligned") var mate1 = fastq1
+    @Input(doc = "fastq file with mate 2 file to be aligned") var mate2 = fastq2
     @Input(doc = "reference") var ref = reference
     @Output(doc = "output aligned bam file") var alignedBam = outBam
 
@@ -290,7 +294,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     this.isIntermediate = intermediate
 
     // Setup paired end or single end case
-    def mateString = " " + mate1 + " " + mate2 + " "
+    def mateString = " " + reformatHeader(Some(mate1)) + reformatHeader(mate2)
 
     // Enabling pipefail should make sure that this gets a non-zero
     // exit status should any of the programs in the pipe fail.
