@@ -281,7 +281,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
               val catter = if (fastqFile.get.getName.endsWith(".gz")) "zcat" else "cat"
               required("<(", escape=false) + required(catter) + required(fastqFile.get.getPath) + required("|", escape=false) +
               required("sed") + conditional(true, "-r") + conditional(true, "-e") +
-              required("s/^(@\\S+)\\s+.*:([ACGTN]+)$/\\1 BC:Z:\\2/", escape=false) + required(")", escape=false)
+              required("s/^(@\\S+)\\s+.*:([ACGTN]+)$/\\1 BC:Z:\\2/") + required(")", escape=false)
           }
       }
       else
@@ -299,7 +299,7 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     // exit status should any of the programs in the pipe fail.
     def commandLine = required("set") + required("-o", "pipefail") +
         required(";", escape=false) + required(bwaPath) + required("mem") + conditional(true, "-M") +
-        required("-t", nbrOfThreads) + required("-R", readGroupInfo, escape=false) + required(ref) +
+        required("-t", nbrOfThreads) + required("-R") + required(readGroupInfo, escape=false) + required(ref) +
         reformatHeader(Some(mate1)) + reformatHeader(mate2) + required("|", escape=false) + sortAndIndex(alignedBam)
 
     override def jobRunnerJobName = projectName.get + "_bwaMem"
