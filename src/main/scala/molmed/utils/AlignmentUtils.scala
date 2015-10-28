@@ -267,23 +267,25 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
                      nbrOfThreads: Int = 15,
                      intermediate: Boolean = false) extends SixteenCoreJob {
 
-    def sortAndIndex(alignedBam: File): String = " | " + samtoolsPath + " view -Su - | " +
-      samtoolsPath + " sort -@ " + nbrOfThreads + " -m 2G " +  
-      " - " + alignedBam.getAbsolutePath().replace(".bam", "") + ";" +
-      samtoolsPath + " index " + alignedBam.getAbsoluteFile()
+    def sortAndIndex(alignedBam: File): String = required(samtoolsPath) + required("view") + conditional(true, "-S") + conditional(true, "-u") +
+        required("-", escape=false) + required("|", escape=false) + required(samtoolsPath) + required("sort") + required("-@",nbrOfThreads, escape=false) +
+        required("-m","2G") + required("-", escape=false) + required(alignedBam.getAbsolutePath().replace(".bam", "")) +
+        required(";", escape=false) + required(samtoolsPath) + required("index") + required(alignedBam.getAbsoluteFile())
 
     // reformat the fastq header so that bwa can add the comment as a tag in the bam file (-C option)
     def reformatHeader(fastqFile: Option[File]): String =
       if (fastqFile.isDefined) {
           if (noBarcodeTag)
-              fastqFile.get.getPath + " "
+              required(fastqFile.get.getPath)
           else {
               val catter = if (fastqFile.get.getName.endsWith(".gz")) "zcat" else "cat"
-              "<(" + catter + " " + fastqFile.get.getPath + "| sed -re 's/^(@\\S+)\\s+.*:([ACGTN]+)$/\\1 BC:Z:\\2/') "
+              required("<(", escape=false) + required(catter) + required(fastqFile.get.getPath) + required("|", escape=false) +
+              required("sed") + conditional(true, "-r") + conditional(true, "-e") +
+              required("s/^(@\\S+)\\s+.*:([ACGTN]+)$/\\1 BC:Z:\\2/", escape=false) + required(")", escape=false)
           }
       }
       else
-          ""
+          conditional(false, "")
 
     @Input(doc = "fastq file with mate 1 to be aligned") var mate1 = fastq1
     @Input(doc = "fastq file with mate 2 file to be aligned") var mate2 = fastq2
@@ -293,17 +295,12 @@ class BwaAlignmentUtils(qscript: QScript, bwaPath: String, bwaThreads: Int, samt
     // The output from this is a samfile, which can be removed later
     this.isIntermediate = intermediate
 
-    // Setup paired end or single end case
-    def mateString = " " + reformatHeader(Some(mate1)) + reformatHeader(mate2)
-
     // Enabling pipefail should make sure that this gets a non-zero
     // exit status should any of the programs in the pipe fail.
-    def commandLine =
-      "set -o pipefail; " + 
-      bwaPath + " mem -M -t " + nbrOfThreads + " " +
-        " -R " + readGroupInfo + " " +
-        ref + mateString +
-        sortAndIndex(alignedBam)
+    def commandLine = required("set") + required("-o", "pipefail") +
+        required(";", escape=false) + required(bwaPath) + required("mem") + conditional(true, "-M") +
+        required("-t", nbrOfThreads) + required("-R", readGroupInfo, escape=false) + required(ref) +
+        reformatHeader(Some(mate1)) + reformatHeader(mate2) + required("|", escape=false) + sortAndIndex(alignedBam)
 
     override def jobRunnerJobName = projectName.get + "_bwaMem"
   }
