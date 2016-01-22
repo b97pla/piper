@@ -275,6 +275,21 @@ class DNABestPracticeVariantCalling extends QScript
 
   }
 
+  def runIntegrityControl(
+                         seqGenotypes: File,
+                         snpGenotypes: Option[File],
+                         reference: File,
+                         genotypeConcordanceOutputDir: File,
+                         generalUtils: GeneralUtils,
+                         gatkOptions: GATKConfig,
+                         uppmaxConfig: UppmaxConfig): Seq[File] = {
+
+    val gatkOptionsWithGenotypingSnp = gatkOptions.copy(snpGenotypingVcf = snpGenotypes)
+    val variantCallingUtils = new VariantCallingUtils(gatkOptionsWithGenotypingSnp, this.projectName, uppmaxConfig)
+    add(new variantCallingUtils.SNPGenotypeConcordance(target))
+    target.genotypeConcordance
+  }
+
   /**
    * Split into chromosome chunks (used to speed up single node analysis)
    */
@@ -395,7 +410,7 @@ class DNABestPracticeVariantCalling extends QScript
     bamTargets: Seq[GATKProcessingTarget],
     outputDirectory: File,
     gatkOptions: GATKConfig,
-    uppmaxConfig: UppmaxConfig): Seq[File] = {
+    uppmaxConfig: UppmaxConfig): Seq[VariantCallingTarget] = {
 
     val variantCallerToUse: Option[VariantCallerOption] = decideVariantCallerType(variantCaller)
 
@@ -625,7 +640,7 @@ class DNABestPracticeVariantCalling extends QScript
         val mergedBams = mergedAlignments(aligments)
         val processedBamTargets = dataProcessing(mergedBams)
         val finalQC = qualityControl(processedBamTargets.map( _.processedBam.file ), finalAlignmentQCOutputDir)
-        val variantCallFiles = variantCalling(processedBamTargets)
+        val variantCallFiles = variantCalling(processedBamTargets).flatMap(_.variantCallingOutputs)
 
         runCreateDelivery(
           fastqs,

@@ -30,6 +30,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         Seq(bamTarget),
         gatkOptions.intervalFile,
         config.isLowPass, config.isExome, 1,
+        config.noRecal,
+        config.skipAnnotation,
         snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
         skipVcfCompression = config.skipVcfCompression))
 
@@ -73,6 +75,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
               Seq(bamTarget),
               gatkOptions.intervalFile,
               config.isLowPass, config.isExome, 1,
+              config.noRecal,
+              config.skipAnnotation,
               skipVcfCompression = target.skipVcfCompression)
 
           config.qscript.add(new HaplotypeCallerBase(modifiedTarget, config.testMode, config.downsampleFraction, config.pcrFree, config.minimumBaseQuality))
@@ -155,18 +159,10 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
    * @param variantFiles The variant files to annotate
    * @return The annotated versions of the files.
    */
-  def annotateUsingSnpEff(config: VariantCallingConfig, variantFiles: Seq[File], vcfExtension: String): Seq[File] = {
-    val outputVcfExtension =
-      if (config.bcftoolsPath.isDefined)
-        vcfExtension
-      else
-        vcfExtension.stripSuffix(".gz")
-    for (file <- variantFiles) yield {
-      val annotatedFile = GeneralUtils.swapExt(file.getParentFile(), file, vcfExtension, "annotated." + outputVcfExtension)
-      config.qscript.add(
-        new SnpEff(file, annotatedFile, config))
-      annotatedFile
-    }
+  def annotateUsingSnpEff(config: VariantCallingConfig, target: VariantCallingTarget): Seq[File] = {
+    config.qscript.add(new SnpEff(target.vcfsToAnnotate(0), target.annotatedSnpVCF, config))
+    config.qscript.add(new SnpEff(target.vcfsToAnnotate(1), target.annotatedIndelVCF, config))
+    target.processedVCFs
   }
 
   /**
@@ -174,7 +170,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
    * @param config The setup for the variant calling (including the bam files to perform calling on).
    * @return The variants (and variant evaluation files need for the run).
    */
-  def performVariantCalling(config: VariantCallingConfig): Seq[File] = {
+  def performVariantCalling(config: VariantCallingConfig): Seq[VariantCallingTarget] = {
 
     // Establish if all samples should be run separately of if they should be
     // run together.
@@ -186,6 +182,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           Seq(bamTarget),
           gatkOptions.intervalFile,
           config.isLowPass, config.isExome, 1,
+          config.noRecal,
+          config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
           skipVcfCompression = config.skipVcfCompression))
 
@@ -196,6 +194,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           Seq(bamTarget),
           gatkOptions.intervalFile,
           config.isLowPass, false, 1,
+          config.noRecal,
+          config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
           skipVcfCompression = config.skipVcfCompression))
 
@@ -206,6 +206,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.bamTargets,
           gatkOptions.intervalFile,
           config.isLowPass, false, config.bamTargets.size,
+          config.noRecal,
+          config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
           skipVcfCompression = config.skipVcfCompression))
 
@@ -216,6 +218,8 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.bamTargets,
           gatkOptions.intervalFile,
           config.isLowPass, config.isExome, config.bamTargets.size,
+          config.noRecal,
+          config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
           skipVcfCompression = config.skipVcfCompression))
     }
@@ -244,17 +248,13 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         }
       })
 
-    val vcfExtension = targets(0).vcfExtension
-    val unannotatedVariantFiles =
-      variantAndEvalFiles.filter(f =>
-        f.getName().endsWith(vcfExtension) &&
-          !f.getName().contains(".genomic.") &&
-          (config.noRecal || !f.getName().contains(".raw.")))
+    if (!config.skipAnnotation) {
+      targets.foreach {
+        annotateUsingSnpEff(config, _)
+      }
+    }
 
-    if (config.skipAnnotation)
-      variantAndEvalFiles
-    else
-      annotateUsingSnpEff(config, unannotatedVariantFiles, vcfExtension) ++ variantAndEvalFiles
+    targets
   }
 
   def bai(bam: File): File = new File(bam + ".bai")
