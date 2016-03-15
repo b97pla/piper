@@ -21,6 +21,15 @@ import org.broadinstitute.gatk.queue.function.CommandLineFunction
  */
 class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], uppmaxConfig: UppmaxConfig) extends GATKUtils(gatkOptions, projectName, uppmaxConfig) {
 
+  def checkVCFIntegrity(qscript: QScript, target: VariantCallingTarget): VariantCallingTarget = {
+    qscript.add(
+      new SNPGenotypeConcordance(
+        target.processedVCFs.filter(_.getName.contains(".snp.")).head,
+        target.snpGenotypingVcf.get,
+        target.genotypeConcordance))
+    target
+  }
+
   def checkGenotypeConcordance(config: VariantCallingConfig): Seq[File] = {
 
     val targets =
@@ -33,6 +42,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
         config.noRecal,
         config.skipAnnotation,
         snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+        genotypeConcordanceOutputDir = config.genotypeConcordanceOutputDir,
         skipVcfCompression = config.skipVcfCompression))
 
     for (target <- targets) yield {
@@ -47,7 +57,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.noBAQ))
 
       config.qscript.add(
-        new SNPGenotypeConcordance(target))
+        new SNPGenotypeConcordance(target.rawSnpVCF, target.snpGenotypingVcf.get, target.genotypeConcordance))
 
       target.genotypeConcordance
     }
@@ -77,6 +87,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
               config.isLowPass, config.isExome, 1,
               config.noRecal,
               config.skipAnnotation,
+              genotypeConcordanceOutputDir = config.genotypeConcordanceOutputDir,
               skipVcfCompression = target.skipVcfCompression)
 
           config.qscript.add(new HaplotypeCallerBase(modifiedTarget, config.testMode, config.downsampleFraction, config.pcrFree, config.minimumBaseQuality))
@@ -185,6 +196,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.noRecal,
           config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          genotypeConcordanceOutputDir = config.genotypeConcordanceOutputDir,
           skipVcfCompression = config.skipVcfCompression))
 
       case (true, true) =>
@@ -197,6 +209,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.noRecal,
           config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          genotypeConcordanceOutputDir = config.genotypeConcordanceOutputDir,
           skipVcfCompression = config.skipVcfCompression))
 
       case (false, true) =>
@@ -209,6 +222,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.noRecal,
           config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          genotypeConcordanceOutputDir = config.genotypeConcordanceOutputDir,
           skipVcfCompression = config.skipVcfCompression))
 
       case (false, false) =>
@@ -221,6 +235,7 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
           config.noRecal,
           config.skipAnnotation,
           snpGenotypingVcf = gatkOptions.snpGenotypingVcf,
+          genotypeConcordanceOutputDir = config.genotypeConcordanceOutputDir,
           skipVcfCompression = config.skipVcfCompression))
     }
 
@@ -581,10 +596,10 @@ class VariantCallingUtils(gatkOptions: GATKConfig, projectName: Option[String], 
     override def jobRunnerJobName = projectName.get + "_VEi"
   }
 
-  class SNPGenotypeConcordance(t: VariantCallingTarget) extends GenotypeConcordance with CommandLineGATKArgs with OneCoreJob {
-    this.eval = t.rawSnpVCF
-    this.comp = TaggedFile(t.snpGenotypingVcf.get, "chip_genotypes")
-    this.out = t.genotypeConcordance
+  class SNPGenotypeConcordance(evalFile: File, compFile: File, outFile: File) extends GenotypeConcordance with CommandLineGATKArgs with OneCoreJob {
+    this.eval = evalFile
+    this.comp = TaggedFile(compFile, "chip_genotypes")
+    this.out = outFile
   }
 
   case class SnpEff(@Input input: File, @Output output: File, config: VariantCallingConfig) extends CommandLineFunction with TwoCoreJob {

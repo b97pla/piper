@@ -7,11 +7,11 @@ organization := "molmed"
 
 version := "v1.3.0"
 
-scalaVersion := "2.10.1"
+scalaVersion := "2.11.8"
 
 // ********************************************
 // Tests
 // ********************************************
-Seq(testNGSettings:_*)
+//Seq(testNGSettings:_*)
 
-testNGSuites := Seq("src/test/resources/testng.xml")
+//testNGSuites := Seq("src/test/resources/testng.xml")

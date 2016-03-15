@@ -1,31 +1,7 @@
 package molmed.qscripts
 
 import org.broadinstitute.gatk.queue.QScript
-import molmed.queue.setup.SampleAPI
-import molmed.utils.AlignerOption
-import molmed.utils.AlignmentQCUtils
-import molmed.utils.BwaAlignmentUtils
-import molmed.utils.BwaAln
-import molmed.utils.BwaMem
-import molmed.utils.GATKConfig
-import molmed.utils.GATKDataProcessingUtils
-import molmed.utils.GATKHaplotypeCaller
-import molmed.utils.GATKProcessingTarget
-import molmed.utils.GATKUnifiedGenotyper
-import molmed.utils.GeneralUtils
-import molmed.utils.MergeFilesUtils
-import molmed.utils.UppmaxConfig
-import molmed.config.UppmaxXMLConfiguration
-import molmed.utils.VariantCallerOption
-import molmed.utils.VariantCallingConfig
-import molmed.utils.VariantCallingUtils
-import org.broadinstitute.gatk.queue.function.InProcessFunction
-import molmed.utils.DeliveryUtils
-import molmed.config.FileAndProgramResourceConfig
 import org.broadinstitute.gatk.utils.commandline.Hidden
-import molmed.report.ReportGenerator
-import molmed.config.FileVersionUtilities.ResourceMap
-import molmed.utils.SplitFilesAndMergeByChromosome
 
 /**
  *
@@ -275,19 +251,17 @@ class DNABestPracticeVariantCalling extends QScript
 
   }
 
-  def runIntegrityControl(
-                         seqGenotypes: File,
-                         snpGenotypes: Option[File],
-                         reference: File,
-                         genotypeConcordanceOutputDir: File,
-                         generalUtils: GeneralUtils,
+  def runIntegrityControl(target: VariantCallingTarget,
                          gatkOptions: GATKConfig,
-                         uppmaxConfig: UppmaxConfig): Seq[File] = {
+                         uppmaxConfig: UppmaxConfig): VariantCallingTarget = {
 
-    val gatkOptionsWithGenotypingSnp = gatkOptions.copy(snpGenotypingVcf = snpGenotypes)
-    val variantCallingUtils = new VariantCallingUtils(gatkOptionsWithGenotypingSnp, this.projectName, uppmaxConfig)
-    add(new variantCallingUtils.SNPGenotypeConcordance(target))
-    target.genotypeConcordance
+    if (!target.snpGenotypingVcf.isEmpty) {
+      val gatkOptionsWithGenotypingSnp = gatkOptions.copy(snpGenotypingVcf = snpGenotypes)
+      val variantCallingUtils = new VariantCallingUtils(gatkOptionsWithGenotypingSnp, this.projectName, uppmaxConfig)
+      variantCallingUtils.checkVCFIntegrity(this, target)
+    }
+    else
+      target
   }
 
   /**
@@ -410,7 +384,8 @@ class DNABestPracticeVariantCalling extends QScript
     bamTargets: Seq[GATKProcessingTarget],
     outputDirectory: File,
     gatkOptions: GATKConfig,
-    uppmaxConfig: UppmaxConfig): Seq[VariantCallingTarget] = {
+    uppmaxConfig: UppmaxConfig,
+    genotypeConcordanceOutputDir: File): Seq[VariantCallingTarget] = {
 
     val variantCallerToUse: Option[VariantCallerOption] = decideVariantCallerType(variantCaller)
 
@@ -426,6 +401,7 @@ class DNABestPracticeVariantCalling extends QScript
       variantCaller = variantCallerToUse,
       bamTargets,
       outputDirectory,
+      genotypeConcordanceOutputDir,
       runSeparatly,
       isLowPass,
       isExome,
@@ -564,6 +540,12 @@ class DNABestPracticeVariantCalling extends QScript
         uppmaxConfig,
         mergedAligmentOutputDir)
 
+    val integrityControl =
+      runIntegrityControl(
+        _: VariantCallingTarget,
+        gatkOptions,
+        uppmaxConfig)
+
     val qualityControl = runQualityControl(
       _: Seq[File],
       intervals,
@@ -582,7 +564,7 @@ class DNABestPracticeVariantCalling extends QScript
 
     val variantCalling = runVariantCalling(
       _: Seq[GATKProcessingTarget], variantCallsOutputDir,
-      gatkOptions, uppmaxConfig)
+      gatkOptions, uppmaxConfig, genotypeConcordanceOutputDir)
 
     /**
      *  Defined the workflow to run
@@ -626,7 +608,8 @@ class DNABestPracticeVariantCalling extends QScript
         val mergedBams = mergedAlignments(aligments)
         val processedBamTargets = dataProcessing(mergedBams)
         qualityControl(processedBamTargets.map( _.processedBam.file ), finalAlignmentQCOutputDir)
-        variantCalling(processedBamTargets)
+        val variantCallingTargets = variantCalling(processedBamTargets).map( integrityControl(_) )
+
       }
       case e if e.contains(AnalysisSteps.GenerateDelivery) => {
 
@@ -640,7 +623,7 @@ class DNABestPracticeVariantCalling extends QScript
         val mergedBams = mergedAlignments(aligments)
         val processedBamTargets = dataProcessing(mergedBams)
         val finalQC = qualityControl(processedBamTargets.map( _.processedBam.file ), finalAlignmentQCOutputDir)
-        val variantCallFiles = variantCalling(processedBamTargets).flatMap(_.variantCallingOutputs)
+        val variantCallFiles = variantCalling(processedBamTargets).map( integrityControl(_) ).flatMap(_.variantCallingOutputs)
 
         runCreateDelivery(
           fastqs,

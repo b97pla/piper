@@ -83,6 +83,7 @@ class AlignmentQCUtils(
       variantCaller = Some(GATKUnifiedGenotyper),
       bamTargets = bamTargets,
       outputDir = outputBase,
+      genotypeConcordanceOutputDir = None,
       runSeparatly = true,
       isLowPass = isLowPass,
       isExome = isExome,
